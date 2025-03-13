@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { VendorService } from './vendor.service';
 import { VendorDto } from './vendor.dto';
 
-@ApiTags('Professionals')
+@ApiTags('Vendors')
 @Controller('vendors')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
@@ -12,7 +12,7 @@ export class VendorController {
   constructor(private readonly vendorService: VendorService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new professional' })
+  @ApiOperation({ summary: 'Create a new vendor' })
   @ApiBody({
     schema: {
       example: {
@@ -27,7 +27,7 @@ export class VendorController {
   })
   @ApiResponse({
     status: 201,
-    description: 'Professional created successfully',
+    description: 'Vendor created successfully',
     schema: {
       example: {
         id: 1,
@@ -41,13 +41,13 @@ export class VendorController {
     }
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async createProfessional(@Body() professional: VendorDto) {
-    console.log('Received professional data:', professional);
-    return this.vendorService.createProfessional(professional);
+  async createVendor(@Body() vendor: VendorDto) {
+    console.log('Received vendor data:', vendor);
+    return this.vendorService.createVendor(vendor);
   }
 
   @Put(':id')
-  @ApiOperation({ summary: 'Update professional by id' })
+  @ApiOperation({ summary: 'Update vendor by id' })
   @ApiBody({
     schema: {
       example: {
@@ -62,7 +62,7 @@ export class VendorController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Professional updated successfully',
+    description: 'Vendor updated successfully',
     schema: {
       example: {
         id: 1,
@@ -76,28 +76,28 @@ export class VendorController {
     }
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Professional not found' })
-  async updateProfessional(@Param('id') id: number, @Body() professional: VendorDto) {
-    return this.vendorService.updateProfessional(id, professional);
+  @ApiResponse({ status: 404, description: 'Vendor not found' })
+  async updateVendor(@Param('id') id: number, @Body() vendor: VendorDto) {
+    return this.vendorService.updateVendor(id, vendor);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get professional by id' })
-  async getProfessional(@Param('id') id: number) {
-    return this.vendorService.getProfessional(id);
+  @ApiOperation({ summary: 'Get vendor by id' })
+  async getVendor(@Param('id') id: number) {
+    return this.vendorService.getVendor(id);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete professional by id' })
-  async deleteProfessional(@Param('id') id: number) {
-    return this.vendorService.deleteProfessional(id);
+  @ApiOperation({ summary: 'Delete vendor by id' })
+  async deleteVendor(@Param('id') id: number) {
+    return this.vendorService.deleteVendor(id);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all professionals' })
+  @ApiOperation({ summary: 'Get all vendors' })
   @ApiResponse({
     status: 200,
-    description: 'List of professionals retrieved successfully',
+    description: 'List of vendors retrieved successfully',
     schema: {
       example: [{
         id: 1,
@@ -115,7 +115,7 @@ export class VendorController {
     name: 'serviceType',
     required: false,
     type: String,
-    description: 'Filter professionals by service type'
+    description: 'Filter vendors by service type'
   })
   @ApiQuery({
     name: 'limit',
@@ -123,11 +123,11 @@ export class VendorController {
     type: Number,
     description: 'Maximum number of records to return'
   })
-  async getAllProfessionals(
+  async getAllVendors(
     @Query('serviceType') serviceType?: string,
     @Query('limit') limit?: number,
   ): Promise<VendorDto[]> {
     console.log('process.env.NODE_ENV', process.env.NODE_ENV);
-    return this.vendorService.getAllProfessionals({ serviceType, limit });
+    return this.vendorService.getAllVendors({ serviceType, limit });
   }
 }

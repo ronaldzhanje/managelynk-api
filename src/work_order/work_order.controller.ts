@@ -29,7 +29,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 
 @ApiTags('Work Orders')
-@Controller('work_orders')
+@Controller('work-orders')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class WorkOrderController {
