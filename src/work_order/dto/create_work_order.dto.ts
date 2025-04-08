@@ -1,15 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsDateString } from 'class-validator';
 
 export class CreateWorkOrderDto {
-  @ApiProperty({
-    description: 'Concise title of the project/job, e.g., "Replace Bathroom Faucet".',
-    example: 'Replace Bathroom Faucet',
-  })
-  @IsString()
-  @IsNotEmpty({ message: 'Title is required' })
-  @MaxLength(100, { message: 'Title must be at most 100 characters' })
-  title: string;
 
   @ApiProperty({
     description: 'Detailed description of the work needed, e.g., "The faucet is old and leaking; I want a new fixture installed. Its a standard 3-hole setup."',
@@ -26,4 +18,13 @@ export class CreateWorkOrderDto {
   @IsString()
   @IsNotEmpty({ message: 'Location is required' })
   location: string;
+
+  @ApiProperty({
+    description: 'Date on which the work is scheduled (formatted as YYYY-MM-DD)',
+    example: '2023-12-01',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'Scheduled date must be in valid YYYY-MM-DD format' })
+  scheduled_date?: string;
 } 

@@ -3,6 +3,7 @@ import { Knex } from 'knex';
 import { CreateWorkOrderDto } from './dto/create_work_order.dto';
 import { UpdateWorkOrderDto } from './dto/update_work_order.dto';
 import { WorkOrder } from './work_order.entity';
+import { WorkOrderStatus } from './dto/work_order_status.enum';
 
 @Injectable()
 export class WorkOrderService {
@@ -14,11 +15,12 @@ export class WorkOrderService {
     photo?: Express.Multer.File,
   ): Promise<WorkOrder> {
     const newWorkOrder: Partial<WorkOrder> = {
-      title: createWorkOrderDto.title,
       description: createWorkOrderDto.description,
       location: createWorkOrderDto.location,
       photo: photo ? photo.filename : null,
-      user_id: userId
+      user_id: userId,
+      status: WorkOrderStatus.TROUBLESHOOTING,
+      scheduled_date: createWorkOrderDto.scheduled_date ? createWorkOrderDto.scheduled_date : null,
     };
 
     const [insertedWorkOrder] = await this.knex('work_orders')
@@ -47,7 +49,9 @@ export class WorkOrderService {
   ): Promise<WorkOrder> {
     const workOrder = await this.getWorkOrderById(id);
     if (workOrder.user_id !== userId) {
-      throw new NotFoundException(`Work order with id ${id} not found or not owned by user`);
+      throw new NotFoundException(
+        `Work order with id ${id} not found or not owned by user`,
+      );
     }
 
     const updatedData: Partial<WorkOrder> = {
@@ -69,7 +73,9 @@ export class WorkOrderService {
   async deleteWorkOrder(id: number, userId: number): Promise<{ deleted: boolean }> {
     const workOrder = await this.getWorkOrderById(id);
     if (workOrder.user_id !== userId) {
-      throw new NotFoundException(`Work order with id ${id} not found or not owned by user`);
+      throw new NotFoundException(
+        `Work order with id ${id} not found or not owned by user`,
+      );
     }
 
     const affectedRows = await this.knex('work_orders')
@@ -86,4 +92,4 @@ export class WorkOrderService {
     }
     return await query;
   }
-} 
+}

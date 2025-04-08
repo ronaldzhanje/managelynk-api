@@ -42,25 +42,19 @@ export class WorkOrderController {
     schema: {
       type: 'object',
       properties: {
-        title: {
-          type: 'string',
-          example: 'Replace Bathroom Faucet',
-        },
         description: {
           type: 'string',
-          example:
-            'The faucet is old and leaking; I want a new fixture installed. Its a standard 3-hole setup.',
+          example: 'The faucet is old and leaking; I want a new fixture installed.',
         },
-        location: {
-          type: 'string',
-          example: '10001',
+        location: { type: 'string', example: '10001' },
+        scheduled_date: { 
+          type: 'string', 
+          example: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
+          format: 'date' 
         },
-        photo: {
-          type: 'string',
-          format: 'binary',
-        },
+        photo: { type: 'string', format: 'binary' },
       },
-      required: ['title', 'description', 'location'],
+      required: ['description', 'location'],
     },
   })
   @UseInterceptors(
@@ -68,8 +62,7 @@ export class WorkOrderController {
       storage: diskStorage({
         destination: './uploads',
         filename: (req, file, callback) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
           callback(null, uniqueSuffix + '-' + file.originalname);
         },
       }),
@@ -120,22 +113,11 @@ export class WorkOrderController {
     schema: {
       type: 'object',
       properties: {
-        title: {
-          type: 'string',
-          example: 'Replace Bathroom Faucet',
-        },
-        description: {
-          type: 'string',
-          example: 'Updated description for the work order.',
-        },
-        location: {
-          type: 'string',
-          example: '10001',
-        },
-        photo: {
-          type: 'string',
-          format: 'binary',
-        },
+        description: { type: 'string', example: 'Updated description of the job.' },
+        location: { type: 'string', example: '10001' },
+        status: { type: 'string', example: 'Work in Progress' },
+        scheduled_date: { type: 'string', example: '2024-01-15', format: 'date' },
+        photo: { type: 'string', format: 'binary' },
       },
     },
   })
@@ -144,8 +126,7 @@ export class WorkOrderController {
       storage: diskStorage({
         destination: './uploads',
         filename: (req, file, callback) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
           callback(null, uniqueSuffix + '-' + file.originalname);
         },
       }),
