@@ -1,24 +1,71 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBody, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, ParseIntPipe, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBody, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EstimateService } from './estimate.service';
 import { EstimateDto, EstimateResponseDto } from './estimate.dto';
+import { FileStorageService } from '../common/services/file-storage.service';
+import { ConfigService } from '@nestjs/config';
 
 @ApiTags('Estimates')
 @Controller('estimates')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class EstimateController {
-  constructor(private readonly estimateService: EstimateService) {}
+  constructor(
+    private readonly estimateService: EstimateService,
+    private readonly fileStorageService: FileStorageService,
+    private readonly configService: ConfigService
+  ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new estimate' })
-  @ApiBody({ type: EstimateDto })
+  @ApiOperation({ summary: 'Create a new estimate with optional file upload' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['estimateData'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary'
+        },
+        estimateData: {
+          type: 'object',
+          properties: {
+            work_order_id: { type: 'number' },
+            vendor_id: { type: 'number' },
+            cost: { type: 'number' },
+            // ... other EstimateDto properties
+          },
+          required: ['work_order_id', 'vendor_id', 'cost']
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Estimate created successfully.', type: EstimateResponseDto })
   @ApiResponse({ status: 400, description: 'Bad Request (e.g., validation error)' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async createEstimate(@Body() estimateData: EstimateDto): Promise<EstimateResponseDto> {
-    return this.estimateService.createEstimate(estimateData);
+  @UseInterceptors(FileInterceptor('file', {
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB
+    },
+    fileFilter: (req, file, cb) => {
+      if (!file.mimetype.match(/\/(pdf|jpeg|png|jpg)$/)) {
+        return cb(new Error('Only PDF and images are allowed'), false);
+      }
+      cb(null, true);
+    },
+  }))
+  async createEstimate(
+    @Body('estimateData') estimateData: string,
+    @UploadedFile() file?: Express.Multer.File
+  ): Promise<EstimateResponseDto> {
+    const parsedEstimateData: EstimateDto = typeof estimateData === 'string' 
+      ? JSON.parse(estimateData)
+      : estimateData;
+
+    return this.estimateService.createEstimateWithFile(parsedEstimateData, file);
   }
 
   @Get()
@@ -53,17 +100,40 @@ export class EstimateController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Update an existing estimate by ID' })
+  @ApiConsumes('multipart/form-data')
   @ApiParam({ name: 'id', description: 'The ID of the estimate to update', type: Number })
-  @ApiBody({ type: EstimateDto, description: 'Fields to update. Only include fields that need changing.' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary'
+        },
+        estimateData: {
+          type: 'object',
+          properties: {
+            work_order_id: { type: 'number' },
+            vendor_id: { type: 'number' },
+            cost: { type: 'number' },
+            // ... other EstimateDto properties
+          }
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Estimate updated successfully.', type: EstimateResponseDto })
   @ApiResponse({ status: 400, description: 'Bad Request (e.g., validation error)' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Estimate not found' })
+  @UseInterceptors(FileInterceptor('file'))
   async updateEstimate(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() estimateData: Partial<EstimateDto>,
+    @Param('id') id: number,
+    @Body('estimateData') estimateDataString: string,
+    @UploadedFile() file?: Express.Multer.File
   ): Promise<EstimateResponseDto> {
-    return this.estimateService.updateEstimate(id, estimateData);
+    const estimateData = JSON.parse(estimateDataString);
+    return this.estimateService.updateEstimateWithFile(id, estimateData, file);
   }
 
   @Delete(':id')

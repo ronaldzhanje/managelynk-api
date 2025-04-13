@@ -3,14 +3,20 @@ import { EstimateController } from './estimate.controller';
 import { EstimateService } from './estimate.service';
 import { DatabaseModule } from '../database/database.module';
 import { AuthModule } from '../auth/auth.module'; // Import AuthModule if JwtAuthGuard needs dependencies from it
+import { FileStorageService } from '../common/services/file-storage.service';
+import { CommonModule } from '../common/common.module';
 
 @Module({
   imports: [
     DatabaseModule,
-    AuthModule // Ensure AuthModule is imported if JwtAuthGuard relies on it
+    AuthModule, // Ensure AuthModule is imported if JwtAuthGuard relies on it
+    CommonModule
   ],
   controllers: [EstimateController],
-  providers: [EstimateService],
+  providers: [
+    EstimateService,
+    FileStorageService  // Add FileStorageService to providers
+  ],
   exports: [EstimateService] // Optional: export if other modules need this service
 })
 export class EstimateModule {} 

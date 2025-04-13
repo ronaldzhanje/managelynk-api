@@ -35,6 +35,15 @@ export class EstimateDto {
   @IsString()
   @IsOptional()
   file?: string;
+
+  @ApiProperty({
+    description: 'File URL for the estimate document',
+    example: '/uploads/estimate_123.pdf',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  fileUrl?: string;
 }
 
 export class EstimateResponseDto extends EstimateDto {

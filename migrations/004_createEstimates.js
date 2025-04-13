@@ -21,7 +21,7 @@ exports.up = async function (knex) {
     table.decimal('cost', 10, 2).notNullable(); // Precision 10, Scale 2
 
     // File path/URL column (nullable)
-    table.string('file').nullable();
+    table.string('fileUrl').nullable();
 
     // Timestamps
     table.timestamps(true, true); // Adds created_at and updated_at columns
