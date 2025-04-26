@@ -22,7 +22,7 @@ export default {
     directory: '../migrations'
   },
   seeds: {
-    directory: '../seeds'
+    directory: './seeds'
   },
   debug: process.env.NODE_ENV !== 'production'
 };

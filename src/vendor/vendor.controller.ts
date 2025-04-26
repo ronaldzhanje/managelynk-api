@@ -30,15 +30,8 @@ export class VendorController {
         phone: "+1234567890",
         email: "contact@abcplumbing.com",
         primaryContactName: "John Doe",
-        services: {
-          plumbing: true,
-          heating: true,
-          emergency: true
-        },
-        qualifier: {
-          certifications: ["Master Plumber"],
-          insurance: true
-        }
+        services: ["plumbing", "heating"],
+        qualifier: ["P200 - General Plumbing contractor"]
       }
     }
   })
@@ -62,15 +55,8 @@ export class VendorController {
         phone: "+1234567890",
         email: "contact@abcplumbing.com",
         primaryContactName: "John Doe",
-        services: {
-          plumbing: true,
-          heating: true,
-          emergency: true
-        },
-        qualifier: {
-          certifications: ["Master Plumber"],
-          insurance: true
-        }
+        services: ["plumbing", "heating"],
+        qualifier: ["P200 - General Plumbing contractor"]
       }
     }
   })
@@ -99,16 +85,8 @@ export class VendorController {
         phone: "+1234567890",
         email: "contact@abcplumbing.com",
         primaryContactName: "John Doe",
-        services: {
-          plumbing: true,
-          heating: true,
-          emergency: true,
-          commercial: true
-        },
-        qualifier: {
-          certifications: ["Master Plumber", "Commercial Specialist"],
-          insurance: true
-        }
+        services: ["plumbing", "heating", "emergency", "commercial"],
+        qualifier: ["P200 - General Plumbing contractor", "P300 - Commercial Plumbing"]
       }
     }
   })
@@ -132,16 +110,8 @@ export class VendorController {
         phone: "+1234567890",
         email: "contact@abcplumbing.com",
         primaryContactName: "John Doe",
-        services: {
-          plumbing: true,
-          heating: true,
-          emergency: true,
-          commercial: true
-        },
-        qualifier: {
-          certifications: ["Master Plumber", "Commercial Specialist"],
-          insurance: true
-        }
+        services: ["plumbing", "heating", "emergency", "commercial"],
+        qualifier: ["P200 - General Plumbing contractor", "P300 - Commercial Plumbing"]
       }
     }
   })
@@ -173,15 +143,8 @@ export class VendorController {
         phone: "+1234567890",
         email: "contact@abcplumbing.com",
         primaryContactName: "John Doe",
-        services: {
-          plumbing: true,
-          heating: true,
-          emergency: true
-        },
-        qualifier: {
-          certifications: ["Master Plumber"],
-          insurance: true
-        }
+        services: ["plumbing", "heating"],
+        qualifier: ["P200 - General Plumbing contractor"]
       }
     }
   })
@@ -219,15 +182,8 @@ export class VendorController {
         phone: "+1234567890",
         email: "contact@abcplumbing.com",
         primaryContactName: "John Doe",
-        services: {
-          plumbing: true,
-          heating: true,
-          emergency: true
-        },
-        qualifier: {
-          certifications: ["Master Plumber"],
-          insurance: true
-        }
+        services: ["plumbing", "heating"],
+        qualifier: ["P200 - General Plumbing contractor"]
       }]
     }
   })

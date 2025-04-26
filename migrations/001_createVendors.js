@@ -7,8 +7,8 @@ exports.up = async function (knex) {
     table.string('licenseStatus');
     table.date('issueDate');
     table.date('expirationDate');
-    table.string('addrLine1');
-    table.string('addrLine2');
+    table.string('addressLine1');
+    table.string('addressLine2');
     table.string('city');
     table.string('state');
     table.string('zipcode');
@@ -18,6 +18,7 @@ exports.up = async function (knex) {
     table.string('email');
     table.json('qualifier');
     table.string('primaryContactName');
+    table.json('services');
   });
 };
 

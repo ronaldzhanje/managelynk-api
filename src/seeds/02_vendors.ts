@@ -9,26 +9,30 @@ export async function seed(knex: Knex): Promise<void> {
   
   // Process seed entries
   const vendors = plumbingCompanies.map((company: any) => ({
-    businessName: company.businessName,
-    license_number: company.licenseNo,
-    license_type: company.licenseType,
-    license_status: company.licenseStatus,
-    license_expiration: company.expirationDate,
-    address_line1: company.addressLine1,
-    address_line2: company.addressLine2,
+    businessName: company.fullName,
+    licenseType: company.licenseType,
+    licenseNo: company.licenseNo,
+    licenseStatus: company.licenseStatus,
+    issueDate: company.issueDate,
+    expirationDate: company.expirationDate,
+    addressLine1: company.addressLine1,
+    addressLine2: company.addressLine2,
     city: company.city,
     state: company.state,
     zipcode: company.zipcode,
     phone: company.phone,
     email: company.email,
-    qualifier: company.qualifier,
-    created_at: new Date(),
-    updated_at: new Date()
+    qualifier: JSON.stringify(company.qualifier),
+    disciplinaryAction: company.disciplinaryAction,
+    docketNumber: company.docketNumber,
   }));
 
-  // Upsert vendors based on license number
+  // Insert vendors
   for (const vendor of vendors) {
-    await knex('vendors')
-      .insert(vendor);
+    try {
+      await knex('vendors').insert(vendor);
+    } catch (error) {
+      console.error(`Error inserting vendor ${vendor.businessName}:`, error);
+    }
   }
 } 

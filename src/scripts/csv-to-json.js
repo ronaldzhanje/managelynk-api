@@ -33,7 +33,7 @@ const jsonData = records.map(record => ({
   disciplinaryAction: record['DISCIPLINARY ACTION'],
   docketNumber: record['DOCKET NUMBER'],
   email: record['EMAIL'],
-  qualifier: record['QUALIFIER']
+  qualifier: record['QUALIFIER'] ? record['QUALIFIER'].split(',').map(item => item.trim()) : []
 }));
 
 // Write the JSON data to a file
