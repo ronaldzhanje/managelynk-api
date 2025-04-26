@@ -1,28 +1,75 @@
-import { IsNotEmpty, IsString, IsOptional, IsEmail, IsArray } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsEmail, IsDate, IsObject } from 'class-validator';
 
 export class VendorDto {
   @IsNotEmpty()
   @IsString()
   businessName: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  primaryContactName: string;
-
-  @IsNotEmpty()
-  @IsString()
-  serviceType: string;
+  licenseType?: string;
 
   @IsOptional()
-  @IsEmail()
-  email?: string;
+  @IsString()
+  licenseNo?: string;
+
+  @IsOptional()
+  @IsString()
+  licenseStatus?: string;
+
+  @IsOptional()
+  @IsDate()
+  issueDate?: Date;
+
+  @IsOptional()
+  @IsDate()
+  expirationDate?: Date;
+
+  @IsOptional()
+  @IsString()
+  addrLine1?: string;
+
+  @IsOptional()
+  @IsString()
+  addrLine2?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @IsOptional()
+  @IsString()
+  zipcode?: string;
 
   @IsOptional()
   @IsString()
   phone?: string;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  service_area?: string[];
+  @IsString()
+  disciplinaryAction?: string;
+
+  @IsOptional()
+  @IsString()
+  docketNumber?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsOptional()
+  @IsObject()
+  qualifier?: any;
+
+  @IsOptional()
+  @IsString()
+  primaryContactName?: string;
+
+  @IsOptional()
+  @IsObject()
+  services?: any;
 }

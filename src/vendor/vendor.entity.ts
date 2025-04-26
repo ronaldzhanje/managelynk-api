@@ -1,9 +1,21 @@
 export interface Vendor {
   id?: number;
   businessName: string;
-  primaryContactName: string;
-  serviceType: string;
-  email?: string;
+  licenseType?: string;
+  licenseNo?: string;
+  licenseStatus?: string;
+  issueDate?: Date;
+  expirationDate?: Date;
+  addrLine1?: string;
+  addrLine2?: string;
+  city?: string;
+  state?: string;
+  zipcode?: string;
   phone?: string;
-  service_area?: string[];
+  disciplinaryAction?: string;
+  docketNumber?: string;
+  email?: string;
+  qualifier?: any;
+  primaryContactName?: string;
+  services?: any;
 }

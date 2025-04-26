@@ -17,11 +17,28 @@ export class VendorController {
     schema: {
       example: {
         businessName: "ABC Plumbing",
-        primaryContactName: "John Doe",
-        serviceType: "Plumbing",
-        email: "john@abcplumbing.com",
+        licenseType: "Contractor",
+        licenseNo: "LIC123456",
+        licenseStatus: "Active",
+        issueDate: "2024-01-01",
+        expirationDate: "2025-01-01",
+        addrLine1: "123 Main St",
+        addrLine2: "Suite 100",
+        city: "Anytown",
+        state: "CA",
+        zipcode: "12345",
         phone: "+1234567890",
-        service_area: ["Zone1", "Zone2"]
+        email: "contact@abcplumbing.com",
+        primaryContactName: "John Doe",
+        services: {
+          plumbing: true,
+          heating: true,
+          emergency: true
+        },
+        qualifier: {
+          certifications: ["Master Plumber"],
+          insurance: true
+        }
       }
     }
   })
@@ -32,11 +49,28 @@ export class VendorController {
       example: {
         id: 1,
         businessName: "ABC Plumbing",
-        primaryContactName: "John Doe",
-        serviceType: "Plumbing",
-        email: "john@abcplumbing.com",
+        licenseType: "Contractor",
+        licenseNo: "LIC123456",
+        licenseStatus: "Active",
+        issueDate: "2024-01-01",
+        expirationDate: "2025-01-01",
+        addrLine1: "123 Main St",
+        addrLine2: "Suite 100",
+        city: "Anytown",
+        state: "CA",
+        zipcode: "12345",
         phone: "+1234567890",
-        service_area: ["Zone1", "Zone2"]
+        email: "contact@abcplumbing.com",
+        primaryContactName: "John Doe",
+        services: {
+          plumbing: true,
+          heating: true,
+          emergency: true
+        },
+        qualifier: {
+          certifications: ["Master Plumber"],
+          insurance: true
+        }
       }
     }
   })
@@ -52,11 +86,29 @@ export class VendorController {
     schema: {
       example: {
         businessName: "ABC Plumbing Updated",
-        primaryContactName: "John Doe",
-        serviceType: "Plumbing & Heating",
-        email: "john@abcplumbing.com",
+        licenseType: "Contractor",
+        licenseNo: "LIC123456",
+        licenseStatus: "Active",
+        issueDate: "2024-01-01",
+        expirationDate: "2025-01-01",
+        addrLine1: "123 Main St",
+        addrLine2: "Suite 200",
+        city: "Anytown",
+        state: "CA",
+        zipcode: "12345",
         phone: "+1234567890",
-        service_area: ["Zone1", "Zone3"]
+        email: "contact@abcplumbing.com",
+        primaryContactName: "John Doe",
+        services: {
+          plumbing: true,
+          heating: true,
+          emergency: true,
+          commercial: true
+        },
+        qualifier: {
+          certifications: ["Master Plumber", "Commercial Specialist"],
+          insurance: true
+        }
       }
     }
   })
@@ -67,11 +119,29 @@ export class VendorController {
       example: {
         id: 1,
         businessName: "ABC Plumbing Updated",
-        primaryContactName: "John Doe",
-        serviceType: "Plumbing & Heating",
-        email: "john@abcplumbing.com",
+        licenseType: "Contractor",
+        licenseNo: "LIC123456",
+        licenseStatus: "Active",
+        issueDate: "2024-01-01",
+        expirationDate: "2025-01-01",
+        addrLine1: "123 Main St",
+        addrLine2: "Suite 200",
+        city: "Anytown",
+        state: "CA",
+        zipcode: "12345",
         phone: "+1234567890",
-        service_area: ["Zone1", "Zone3"]
+        email: "contact@abcplumbing.com",
+        primaryContactName: "John Doe",
+        services: {
+          plumbing: true,
+          heating: true,
+          emergency: true,
+          commercial: true
+        },
+        qualifier: {
+          certifications: ["Master Plumber", "Commercial Specialist"],
+          insurance: true
+        }
       }
     }
   })
@@ -83,12 +153,46 @@ export class VendorController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get vendor by id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Vendor retrieved successfully',
+    schema: {
+      example: {
+        id: 1,
+        businessName: "ABC Plumbing",
+        licenseType: "Contractor",
+        licenseNo: "LIC123456",
+        licenseStatus: "Active",
+        issueDate: "2024-01-01",
+        expirationDate: "2025-01-01",
+        addrLine1: "123 Main St",
+        addrLine2: "Suite 100",
+        city: "Anytown",
+        state: "CA",
+        zipcode: "12345",
+        phone: "+1234567890",
+        email: "contact@abcplumbing.com",
+        primaryContactName: "John Doe",
+        services: {
+          plumbing: true,
+          heating: true,
+          emergency: true
+        },
+        qualifier: {
+          certifications: ["Master Plumber"],
+          insurance: true
+        }
+      }
+    }
+  })
   async getVendor(@Param('id') id: number) {
     return this.vendorService.getVendor(id);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete vendor by id' })
+  @ApiResponse({ status: 200, description: 'Vendor deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Vendor not found' })
   async deleteVendor(@Param('id') id: number) {
     return this.vendorService.deleteVendor(id);
   }
@@ -102,20 +206,43 @@ export class VendorController {
       example: [{
         id: 1,
         businessName: "ABC Plumbing",
-        primaryContactName: "John Doe",
-        serviceType: "Plumbing",
-        email: "john@abcplumbing.com",
+        licenseType: "Contractor",
+        licenseNo: "LIC123456",
+        licenseStatus: "Active",
+        issueDate: "2024-01-01",
+        expirationDate: "2025-01-01",
+        addrLine1: "123 Main St",
+        addrLine2: "Suite 100",
+        city: "Anytown",
+        state: "CA",
+        zipcode: "12345",
         phone: "+1234567890",
-        service_area: ["Zone1", "Zone2"]
+        email: "contact@abcplumbing.com",
+        primaryContactName: "John Doe",
+        services: {
+          plumbing: true,
+          heating: true,
+          emergency: true
+        },
+        qualifier: {
+          certifications: ["Master Plumber"],
+          insurance: true
+        }
       }]
     }
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiQuery({
-    name: 'serviceType',
+    name: 'licenseType',
     required: false,
     type: String,
-    description: 'Filter vendors by service type'
+    description: 'Filter vendors by license type'
+  })
+  @ApiQuery({
+    name: 'licenseStatus',
+    required: false,
+    type: String,
+    description: 'Filter vendors by license status'
   })
   @ApiQuery({
     name: 'limit',
@@ -124,10 +251,11 @@ export class VendorController {
     description: 'Maximum number of records to return'
   })
   async getAllVendors(
-    @Query('serviceType') serviceType?: string,
+    @Query('licenseType') licenseType?: string,
+    @Query('licenseStatus') licenseStatus?: string,
     @Query('limit') limit?: number,
   ): Promise<VendorDto[]> {
     console.log('process.env.NODE_ENV', process.env.NODE_ENV);
-    return this.vendorService.getAllVendors({ serviceType, limit });
+    return this.vendorService.getAllVendors({ licenseType, licenseStatus, limit });
   }
 }

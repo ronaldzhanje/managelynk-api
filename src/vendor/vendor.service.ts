@@ -4,7 +4,8 @@ import { Vendor } from './vendor.entity';
 import { VendorDto } from './vendor.dto';
 
 interface VendorFilter {
-  serviceType?: string;
+  licenseType?: string;
+  licenseStatus?: string;
   limit?: number;
 }
 
@@ -31,8 +32,12 @@ export class VendorService {
   async getAllVendors(filter: VendorFilter): Promise<VendorDto[]> {
     const query = this.knex('vendors').select('*');
 
-    if (filter?.serviceType) {
-      query.where('serviceType', 'like', `%${filter.serviceType}%`);
+    if (filter?.licenseType) {
+      query.where('licenseType', 'like', `%${filter.licenseType}%`);
+    }
+
+    if (filter?.licenseStatus) {
+      query.where('licenseStatus', filter.licenseStatus);
     }
     
     if (filter?.limit) {

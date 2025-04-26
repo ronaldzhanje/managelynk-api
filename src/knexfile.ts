@@ -21,5 +21,8 @@ export default {
   migrations: {
     directory: '../migrations'
   },
+  seeds: {
+    directory: '../seeds'
+  },
   debug: process.env.NODE_ENV !== 'production'
 };
