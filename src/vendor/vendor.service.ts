@@ -7,6 +7,9 @@ interface VendorFilter {
   licenseType?: string;
   licenseStatus?: string;
   limit?: number;
+  qualifier?: string;
+  businessName?: string;
+  city?: string;
 }
 
 @Injectable()
@@ -40,9 +43,20 @@ export class VendorService {
       query.where('licenseStatus', filter.licenseStatus);
     }
     
-    if (filter?.limit) {
-      query.limit(filter.limit);
+    if (filter?.qualifier) {
+      query.whereRaw("qualifier::text ILIKE ?", [`%${filter.qualifier}%`]);
     }
+    
+    if (filter?.businessName) {
+      query.where('businessName', 'like', `%${filter.businessName}%`);
+    }
+    
+    if (filter?.city) {
+      query.where('city', 'like', `%${filter.city}%`);
+    }
+    
+    const limit = filter?.limit || 10;
+    query.limit(limit);
     
     return await query;
   }

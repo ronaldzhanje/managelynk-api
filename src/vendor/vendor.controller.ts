@@ -206,12 +206,40 @@ export class VendorController {
     type: Number,
     description: 'Maximum number of records to return'
   })
+  @ApiQuery({
+    name: 'qualifier',
+    required: false,
+    type: String,
+    description: 'Filter vendors by qualifier'
+  })
+  @ApiQuery({
+    name: 'businessName',
+    required: false,
+    type: String,
+    description: 'Filter vendors by business name'
+  })
+  @ApiQuery({
+    name: 'city',
+    required: false,
+    type: String,
+    description: 'Filter vendors by city'
+  })
   async getAllVendors(
     @Query('licenseType') licenseType?: string,
     @Query('licenseStatus') licenseStatus?: string,
     @Query('limit') limit?: number,
+    @Query('qualifier') qualifier?: string,
+    @Query('businessName') businessName?: string,
+    @Query('city') city?: string,
   ): Promise<VendorDto[]> {
     console.log('process.env.NODE_ENV', process.env.NODE_ENV);
-    return this.vendorService.getAllVendors({ licenseType, licenseStatus, limit });
+    return this.vendorService.getAllVendors({ 
+      licenseType, 
+      licenseStatus, 
+      limit,
+      qualifier,
+      businessName,
+      city
+    });
   }
 }
