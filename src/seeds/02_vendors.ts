@@ -54,12 +54,15 @@ export async function seed(knex: Knex): Promise<void> {
   // Combine all vendors
   const allVendors = [...plumbingVendors, ...landscapeVendors];
 
-  // Insert vendors
+  // Insert vendors with upsert
   for (const vendor of allVendors) {
     try {
-      await knex('vendors').insert(vendor);
+      await knex('vendors')
+        .insert(vendor)
+        .onConflict('businessName')
+        .merge();
     } catch (error) {
-      console.error(`Error inserting vendor ${vendor.businessName}:`, error);
+      console.error(`Error upserting vendor ${vendor.businessName}:`, error);
     }
   }
 } 

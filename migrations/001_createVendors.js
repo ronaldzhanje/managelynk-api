@@ -1,9 +1,9 @@
 exports.up = async function (knex) {
   await knex.schema.createTable('vendors', function (table) {
     table.increments('id').primary();
-    table.string('businessName').notNullable();
+    table.string('businessName').notNullable().unique();
     table.string('licenseType');
-    table.string('licenseNo');
+    table.string('licenseNo').unique();
     table.string('licenseStatus');
     table.date('issueDate');
     table.date('expirationDate');
