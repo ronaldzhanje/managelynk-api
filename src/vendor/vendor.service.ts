@@ -25,7 +25,18 @@ export class VendorService {
   }
 
   async updateVendor(id: number, data: Partial<Vendor>): Promise<number> {
-    return this.knex('vendors').where({ id }).update(data);
+    // Create a copy of the data to avoid modifying the original
+    const updateData = { ...data };
+    
+    // Stringify JSON fields if they exist
+    if (updateData.qualifier) {
+      updateData.qualifier = JSON.stringify(updateData.qualifier);
+    }
+    if (updateData.services) {
+      updateData.services = JSON.stringify(updateData.services);
+    }
+    
+    return this.knex('vendors').where({ id }).update(updateData);
   }
 
   async deleteVendor(id: number): Promise<number> {
