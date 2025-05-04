@@ -4,7 +4,7 @@ export interface WorkOrder {
   id?: number;
   description: string;
   location: string;
-  photo?: string;
+  images?: string; // JSON string of image URLs
   user_id: number;
   status: WorkOrderStatus;
   scheduled_date?: string | Date;

@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
   UseInterceptors,
-  UploadedFile,
+  UploadedFiles,
   Request,
   NotFoundException,
 } from '@nestjs/common';
@@ -25,8 +25,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { WorkOrderService } from './work_order.service';
 import { CreateWorkOrderDto } from './dto/create_work_order.dto';
 import { UpdateWorkOrderDto } from './dto/update_work_order.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { FilesInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Work Orders')
 @Controller('work-orders')
@@ -52,21 +51,17 @@ export class WorkOrderController {
           example: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
           format: 'date' 
         },
-        photo: { type: 'string', format: 'binary' },
+        images: { 
+          type: 'array',
+          items: { type: 'string', format: 'binary' }
+        },
       },
       required: ['description', 'location'],
     },
   })
   @UseInterceptors(
-    FileInterceptor('photo', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, callback) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          callback(null, uniqueSuffix + '-' + file.originalname);
-        },
-      }),
-      limits: { fileSize: 2 * 1024 * 1024 },
+    FilesInterceptor('images', 10, {
+      limits: { fileSize: 5 * 1024 * 1024 },
       fileFilter: (req, file, callback) => {
         if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
           return callback(new Error('Only image files are allowed!'), false);
@@ -77,14 +72,14 @@ export class WorkOrderController {
   )
   async createWorkOrder(
     @Body() createWorkOrderDto: CreateWorkOrderDto,
-    @UploadedFile() photo: Express.Multer.File,
+    @UploadedFiles() images: Express.Multer.File[],
     @Request() req,
   ) {
     const user = req.user;
     return this.workOrderService.createWorkOrder(
       createWorkOrderDto,
       user.userId,
-      photo,
+      images,
     );
   }
 
@@ -117,19 +112,15 @@ export class WorkOrderController {
         location: { type: 'string', example: '10001' },
         status: { type: 'string', example: 'Work in Progress' },
         scheduled_date: { type: 'string', example: '2024-01-15', format: 'date' },
-        photo: { type: 'string', format: 'binary' },
+        images: { 
+          type: 'array',
+          items: { type: 'string', format: 'binary' }
+        },
       },
     },
   })
   @UseInterceptors(
-    FileInterceptor('photo', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, callback) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          callback(null, uniqueSuffix + '-' + file.originalname);
-        },
-      }),
+    FilesInterceptor('images', 10, {
       limits: { fileSize: 2 * 1024 * 1024 },
       fileFilter: (req, file, callback) => {
         if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
@@ -142,7 +133,7 @@ export class WorkOrderController {
   async updateWorkOrder(
     @Param('id') id: number,
     @Body() updateWorkOrderDto: UpdateWorkOrderDto,
-    @UploadedFile() photo: Express.Multer.File,
+    @UploadedFiles() images: Express.Multer.File[],
     @Request() req,
   ) {
     const user = req.user;
@@ -150,7 +141,7 @@ export class WorkOrderController {
       id,
       updateWorkOrderDto,
       user.userId,
-      photo,
+      images,
     );
   }
 
