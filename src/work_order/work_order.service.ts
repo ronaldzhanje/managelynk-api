@@ -6,6 +6,7 @@ import { WorkOrder } from './work_order.entity';
 import { WorkOrderStatus } from './dto/work_order_status.enum';
 import { FileStorageService } from '../common/services/file-storage.service';
 import { ConfigService } from '@nestjs/config';
+import { Role } from '../common/enums/role.enum';
 
 @Injectable()
 export class WorkOrderService {
@@ -215,10 +216,10 @@ export class WorkOrderService {
     return { deleted: affectedRows > 0 };
   }
 
-  async getAllWorkOrders(userId?: number): Promise<WorkOrder[]> {
-    const query = this.knex<WorkOrder>('work_orders').select('*');
-    if (userId) {
-      query.where({ user_id: userId });
+  async getAllWorkOrders(userId?: number, role?: Role): Promise<WorkOrder[]> {
+    let query = this.knex<WorkOrder>('work_orders').select('*');
+    if (userId && role !== Role.ADMIN) {
+      query = query.where({ user_id: userId });
     }
     const workOrders = await query;
 

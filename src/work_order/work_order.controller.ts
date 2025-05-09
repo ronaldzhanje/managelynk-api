@@ -84,10 +84,9 @@ export class WorkOrderController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all work orders for the logged-in user' })
-  async getAllWorkOrders(@Request() req) {
-    const user = req.user;
-    return this.workOrderService.getAllWorkOrders(user.userId);
+  @ApiOperation({ summary: 'Get all work orders' })
+  async getWorkOrders(@Request() req) {
+    return this.workOrderService.getAllWorkOrders(req.user.userId, req.user.role);
   }
 
   @Get(':id')

@@ -1,5 +1,7 @@
 import { WorkOrderStatus } from './dto/work_order_status.enum';
 
+export { WorkOrderStatus };
+
 export interface WorkOrder {
   id?: number;
   description: string;
