@@ -120,7 +120,7 @@ describe('WorkOrderController (e2e)', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
+    // Clean up test data.
     await knex('users')
       .where('email', 'user@test.com')
       .orWhere('email', 'admin@test.com')
