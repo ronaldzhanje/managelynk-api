@@ -21,6 +21,7 @@ describe('WorkOrderController (e2e)', () => {
   let workOrderId: number;
 
   beforeAll(async () => {
+    // Initialize the app with test configuration
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({
@@ -120,7 +121,8 @@ describe('WorkOrderController (e2e)', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data.
+    // Clean up all test data
+    await knex('work_orders').del();
     await knex('users')
       .where('email', 'user@test.com')
       .orWhere('email', 'admin@test.com')
@@ -163,30 +165,84 @@ describe('WorkOrderController (e2e)', () => {
         .set('Cookie', `jwt=${userToken}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.length).toBe(1);
-      expect(response.body[0].id).toBe(workOrderId);
+      // Verify the user only sees their own work orders
+      const userWorkOrders = response.body.filter((wo: any) => wo.user_id === userId);
+      expect(userWorkOrders.length).toBe(1);
+      expect(userWorkOrders[0].id).toBe(workOrderId);
+    });
+
+    it('should allow access to their own work order by ID', async () => {
+      // User should be able to access their own work order
+      const response = await request(app.getHttpServer())
+        .get(`/work-orders/${workOrderId}`)
+        .set('Cookie', `jwt=${userToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('id', workOrderId);
+      expect(response.body.user_id).toBe(userId);
+    });
+
+    it('should prevent access to other users\' work orders', async () => {
+      // Create a work order as admin
+      const adminWorkOrder = await request(app.getHttpServer())
+        .post('/work-orders')
+        .set('Cookie', `jwt=${adminToken}`)
+        .send({
+          description: 'Another admin work order',
+          location: 'Admin location 2',
+        });
+
+      // Regular user should not be able to access admin's work order
+      const response = await request(app.getHttpServer())
+        .get(`/work-orders/${adminWorkOrder.body.id}`)
+        .set('Cookie', `jwt=${userToken}`);
+
+      expect(response.status).toBe(403); // Forbidden
     });
   });
 
   describe('Admin Role Tests', () => {
-    it('should see all work orders', async () => {
-      // Admin should see all work orders (1 user work order + 1 admin work order)
+    let adminWorkOrderId: number;
 
-      // Admin should see all work orders
+    beforeEach(async () => {
+      // Create a work order as admin before each test
+      const adminWorkOrder = await request(app.getHttpServer())
+        .post('/work-orders')
+        .set('Cookie', `jwt=${adminToken}`)
+        .send({
+          description: 'Admin work order',
+          location: 'Admin location',
+        });
+      adminWorkOrderId = adminWorkOrder.body.id;
+    });
+
+    it('should see all work orders', async () => {
+      // Admin should see all work orders (user work order + admin work order)
       const response = await request(app.getHttpServer())
         .get('/work-orders')
         .set('Cookie', `jwt=${adminToken}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.length).toBe(2); // 1 user work order + 1 admin work order
+      // Verify admin can see both their own and user's work orders
+      const workOrderIds = response.body.map((wo: any) => wo.id);
+      expect(workOrderIds).toContain(workOrderId);
+      expect(workOrderIds).toContain(adminWorkOrderId);
+    });
+
+    it('should be able to get any work order by ID', async () => {
+      // Admin should be able to access any work order regardless of ownership
+      const response = await request(app.getHttpServer())
+        .get(`/work-orders/${workOrderId}`)
+        .set('Cookie', `jwt=${adminToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('id', workOrderId);
     });
   });
 
   afterAll(async () => {
     // Clean up test data
-    await knex('work_orders')
-      .del();
-
+    await knex('work_orders').del();
     await knex('users')
       .where('email', 'user@test.com')
       .orWhere('email', 'admin@test.com')

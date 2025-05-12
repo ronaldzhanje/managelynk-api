@@ -12,6 +12,7 @@ import {
   UploadedFiles,
   Request,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -94,9 +95,12 @@ export class WorkOrderController {
   async getWorkOrder(@Param('id') id: number, @Request() req) {
     const user = req.user;
     const workOrder = await this.workOrderService.getWorkOrderById(id);
-    if (workOrder.user_id !== user.userId) {
-      throw new NotFoundException('Work order not found');
+    
+    // Allow admin to see any work order, regular users can only see their own
+    if (user.role !== 'ADMIN' && workOrder.user_id !== user.userId) {
+      throw new ForbiddenException('You do not have permission to view this work order');
     }
+    
     return workOrder;
   }
 
