@@ -1,4 +1,5 @@
-import { Controller, Post, Body, UseGuards, Request, Response, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Response, Get, UnauthorizedException } from '@nestjs/common';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
@@ -67,5 +68,28 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Logout successful' })
   async logout(@Response({ passthrough: true }) res) {
     return this.authService.logout(res);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the current user profile',
+    schema: {
+      example: {
+        id: 1,
+        email: 'user@example.com',
+        role: 'user'
+      }
+    }
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getProfile(@Request() req) {
+    const user = await this.authService.getProfile(req.user.userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return user;
   }
 } 

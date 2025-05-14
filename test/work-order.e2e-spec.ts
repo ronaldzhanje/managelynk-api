@@ -19,6 +19,8 @@ describe('WorkOrderController (e2e)', () => {
   let userId: number;
   let adminId: number;
   let workOrderId: number;
+  const testWorkOrderIds: number[] = [];
+  const testUserEmails = ['user@test.com', 'admin@test.com'];
 
   beforeAll(async () => {
     // Initialize the app with test configuration
@@ -121,11 +123,14 @@ describe('WorkOrderController (e2e)', () => {
   });
 
   afterAll(async () => {
-    // Clean up all test data
-    await knex('work_orders').del();
+    // Clean up only test data that was created during this test run
+    if (testWorkOrderIds.length > 0) {
+      await knex('work_orders').whereIn('id', testWorkOrderIds).del();
+    }
+    
+    // Clean up test users
     await knex('users')
-      .where('email', 'user@test.com')
-      .orWhere('email', 'admin@test.com')
+      .whereIn('email', testUserEmails)
       .del();
 
     await app.close();
@@ -147,17 +152,19 @@ describe('WorkOrderController (e2e)', () => {
       expect(response.body).toHaveProperty('id');
       expect(response.body.user_id).toBe(userId);
       workOrderId = response.body.id;
+      testWorkOrderIds.push(workOrderId);
     });
 
     it('should only see their own work orders', async () => {
       // Create a work order for admin
       const adminWorkOrder = await request(app.getHttpServer())
         .post('/work-orders')
-        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Cookie', `jwt=${adminToken}`)
         .send({
           description: 'Admin work order',
           location: 'Admin location',
         });
+      testWorkOrderIds.push(adminWorkOrder.body.id);
 
       // User should only see their own work orders
       const response = await request(app.getHttpServer())
@@ -191,6 +198,7 @@ describe('WorkOrderController (e2e)', () => {
           description: 'Another admin work order',
           location: 'Admin location 2',
         });
+      testWorkOrderIds.push(adminWorkOrder.body.id);
 
       // Regular user should not be able to access admin's work order
       const response = await request(app.getHttpServer())

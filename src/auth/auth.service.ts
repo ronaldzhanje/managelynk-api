@@ -63,4 +63,14 @@ export class AuthService {
     });
     return { success: true };
   }
+
+  async getProfile(userId: number) {
+    const user = await this.userService.findById(userId);
+    if (!user) {
+      return null;
+    }
+    // Don't return the password
+    const { password, ...result } = user;
+    return result;
+  }
 } 
