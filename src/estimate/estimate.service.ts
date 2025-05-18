@@ -3,13 +3,15 @@ import { Knex } from 'knex';
 import { EstimateDto, EstimateResponseDto } from './estimate.dto';
 import { FileStorageService } from '../common/services/file-storage.service';
 import { ConfigService } from '@nestjs/config';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class EstimateService {
   constructor(
     @Inject('KNEX_CONNECTION') private knex: Knex,
     private readonly fileStorageService: FileStorageService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly emailService: EmailService
   ) {}
 
   async transaction<T>(operation: (trx: Knex.Transaction) => Promise<T>): Promise<T> {
@@ -28,6 +30,28 @@ export class EstimateService {
     const [newEstimate] = await queryBuilder('estimates')
       .insert(estimateData)
       .returning('*');
+
+    // Send email notification to client
+    try {
+      // Get vendor information
+      const vendor = await queryBuilder('vendors')
+        .where({ id: estimateData.vendor_id })
+        .first();
+
+      if (vendor && estimateData.client_email) {
+        await this.emailService.sendEstimateNotification({
+          to: estimateData.client_email,
+          workOrderId: estimateData.work_order_id.toString(),
+          cost: estimateData.cost,
+          vendorName: vendor.businessName,
+          status: estimateData.status,
+          notes: estimateData.notes
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send estimate notification:', error);
+    }
+
     return newEstimate;
   }
 

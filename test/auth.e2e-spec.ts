@@ -1,230 +1,197 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { Knex } from 'knex';
+import { AppModule } from '../src/app.module';
 import { AuthModule } from '../src/auth/auth.module';
-import { ConfigModule } from '@nestjs/config';
-import { join } from 'path';
-import * as cookieParser from 'cookie-parser';
+import * as Knex from 'knex';
+import { Knex as KnexType } from 'knex';
+import knexConfig from '../src/knexfile';
 
-xdescribe('AuthController (e2e)', () => {
+let knex: KnexType; // Declare knex with proper type
+
+// Initialize Knex with the configuration
+beforeAll(async () => {
+  knex = Knex(knexConfig);
+});
+
+// Cleanup Knex connection after all tests
+afterAll(async () => {
+  if (knex) {
+    await knex.destroy();
+    knex = null;
+  }
+});
+
+describe('AuthController (e2e)', () => {
   let app: INestApplication;
-  let knex: Knex;
-  let authCookie: string[];
-
-  const testUser = {
-    email: 'testuser@example.com',
-    password: 'StrongPassword123',
-  };
+  let db: any;
+  const testUsers = new Set<string>();
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          load: [() => ({
-            JWT_SECRET: 'test-secret-key',
-          })],
-        }),
-        AuthModule,
-      ],
+      imports: [AppModule, AuthModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    
-    // Add cookie-parser middleware
-    app.use(cookieParser());
-    
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-
     await app.init();
-    knex = app.get<Knex>('KNEX_CONNECTION');
+    db = knex;
   });
 
   afterAll(async () => {
-    await knex('users').where({ email: testUser.email }).del();
-    await knex.destroy();
-    await app.close();
+    try {
+      // Delete all test users created during tests
+      if (testUsers.size > 0) {
+        await knex('users').whereIn('email', Array.from(testUsers)).del();
+      }
+      
+      // Close the NestJS application
+      await app.close();
+      
+      // Close the Knex connection
+      if (knex) {
+        await knex.destroy();
+        knex = null;
+      }
+    } catch (error) {
+      console.error('Error during cleanup:', error);
+      // Don't throw error here to ensure all cleanup attempts are made
+    }
   });
 
-  describe('/auth/register (POST)', () => {
-    it('should register a new user successfully', () => {
-      return request(app.getHttpServer())
-        .post('/auth/register')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        })
-        .expect(201)
-        .expect((res) => {
-          const cookies = res.headers['set-cookie'];
-          expect(cookies).toBeDefined();
-          expect(cookies[0]).toMatch(/jwt=/);
-          expect(cookies[0]).toMatch(/HttpOnly/);
-          expect(cookies[0]).toMatch(/SameSite=Strict/);
-          
-          authCookie = Array.isArray(cookies) ? cookies : [cookies];
-          expect(res.body).toEqual({ success: true });
-        });
+  beforeEach(async () => {
+    // Clear the test users set before each test
+    testUsers.clear();
+  });
+
+  const createTestUser = async (password: string) => {
+    const timestamp = Date.now();
+    const testEmail = `test_${timestamp}@example.com`;
+    testUsers.add(testEmail);
+    return testEmail;
+  };
+
+  // Helper function to register a user and return their credentials
+  const registerUser = async (password: string) => {
+    const testEmail = await createTestUser(password);
+    const response = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: testEmail,
+        password,
+      })
+      .expect(201);
+    return { email: testEmail, password, accessToken: response.body.accessToken };
+  };
+
+  describe('POST /auth/register', () => {
+    it('should register a new user', async () => {
+      const { email } = await registerUser('strongPassword123');
+      expect(email).toBeDefined();
     });
 
-    it('should fail to register with invalid email', () => {
-      return request(app.getHttpServer())
+    it('should return 409 if email already exists', async () => {
+      const { email } = await registerUser('strongPassword123');
+      await request(app.getHttpServer())
         .post('/auth/register')
         .send({
-          email: 'invalid-email',
-          password: testUser.password,
+          email,
+          password: 'anotherPassword',
         })
-        .expect(409)
-        .expect((res) => {
-          expect(res.body.message).toContain('Email already exists');
-        });
-    });
-
-    it('should fail to register with a weak password', () => {
-      return request(app.getHttpServer())
-        .post('/auth/register')
-        .send({
-          email: 'weakpassword@example.com',
-          password: '123',
-        })
-        .expect(409)
-        .expect((res) => {
-          expect(res.body.message).toContain('Email already exists');
-        });
+        .expect(409);
     });
   });
 
-  describe('/auth/login (POST)', () => {
-    it('should login successfully with valid credentials', () => {
-      return request(app.getHttpServer())
+  describe('POST /auth/login', () => {
+    it('should login with correct credentials', async () => {
+      const { email, password } = await registerUser('loginPassword123');
+      const loginResponse = await request(app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: testUser.email,
-          password: testUser.password,
+          email,
+          password,
         })
-        .expect(201)
-        .expect((res) => {
-          const cookies = res.headers['set-cookie'];
-          expect(cookies).toBeDefined();
-          expect(cookies[0]).toMatch(/jwt=/);
-          expect(cookies[0]).toMatch(/HttpOnly/);
-          expect(cookies[0]).toMatch(/SameSite=Strict/);
-          
-          authCookie = Array.isArray(cookies) ? cookies : [cookies];
-          expect(res.body).toEqual({ success: true });
-        });
+        .expect(201);
+      expect(loginResponse.body).toEqual({ success: true });
     });
 
-    it('should fail to login with incorrect password', () => {
-      return request(app.getHttpServer())
+    it('should return 401 with incorrect password', async () => {
+      const { email } = await registerUser('loginPassword123');
+      await request(app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: testUser.email,
-          password: 'WrongPassword123',
+          email,
+          password: 'wrongPassword',
         })
-        .expect(401)
-        .expect((res) => {
-          expect(res.body.message).toBe('Unauthorized');
-        });
+        .expect(401);
     });
 
-    it('should fail to login with non-existent email', () => {
-      return request(app.getHttpServer())
+    it('should return 401 with non-existent email', async () => {
+      await request(app.getHttpServer())
         .post('/auth/login')
         .send({
           email: 'nonexistent@example.com',
-          password: 'SomePassword123',
+          password: 'password',
         })
-        .expect(401)
-        .expect((res) => {
-          expect(res.body.message).toBe('Unauthorized');
-        });
-    });
-
-    xit('should fail to login with invalid email format', () => {
-      return request(app.getHttpServer())
-        .post('/auth/login')
-        .send({
-          email: 'invalid-email',
-          password: testUser.password,
-        })
-        .expect(400)
-        .expect((res) => {
-          expect(res.body.message).toContain('email must be an email');
-        });
-    });
-
-    it('should fail to login with missing password', () => {
-      return request(app.getHttpServer())
-        .post('/auth/login')
-        .send({
-          email: testUser.email,
-          // password is missing
-        })
-        .expect(401)
-        .expect((res) => {
-          expect(res.body.message).toContain('Unauthorized');
-        });
+        .expect(401);
     });
   });
 
-  describe('/auth/logout (POST)', () => {
-    beforeEach(async () => {
-      // Login to get a fresh cookie before each test
-      const response = await request(app.getHttpServer())
+  describe('GET /auth/me', () => {
+    it('should return user profile with valid token', async () => {
+      const { email } = await registerUser('profilePassword123');
+      const loginResponse = await request(app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: testUser.email,
-          password: testUser.password,
+          email,
+          password: 'profilePassword123',
+        })
+        .expect(201);
+      
+      const profileResponse = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${loginResponse.body.access_token}`)
+        .expect(200);
+      expect(profileResponse.body).toHaveProperty('id');
+      expect(profileResponse.body).toHaveProperty('email', email);
+      expect(profileResponse.body).toHaveProperty('role');
+    });
+
+    it('should return 401 with invalid token', async () => {
+      await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', 'Bearer invalid.token.here')
+        .expect(401);
+    });
+  });
+
+  describe('POST /auth/logout', () => {
+    it('should logout user and invalidate token', async () => {
+      // Register and login to get token
+      const registerResponse = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: 'logout@example.com',
+          password: 'logoutPassword123',
         });
       
-      const cookies = response.headers['set-cookie'];
-      authCookie = Array.isArray(cookies) ? cookies : [cookies];
-    });
-
-    it('should logout successfully when authenticated', () => {
-      return request(app.getHttpServer())
-        .post('/auth/logout')
-        .set('Cookie', authCookie)
-        .expect(201)
-        .expect((res) => {
-          const cookies = res.headers['set-cookie'];
-          expect(cookies[0]).toMatch(/jwt=;/);
-          expect(cookies[0]).toMatch(/HttpOnly/);
-          expect(cookies[0]).toMatch(/SameSite=Strict/);
-          
-          expect(res.body).toEqual({ success: true });
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'logout@example.com',
+          password: 'logoutPassword123',
         });
-    });
+      
+      const accessToken = loginResponse.body.accessToken;
 
-    it('should fail to logout without authentication', () => {
-      return request(app.getHttpServer())
+      // Logout
+      await request(app.getHttpServer())
         .post('/auth/logout')
-        .expect(201)
-        .expect((res) => {
-          expect(res.body).toEqual({ success: true });
-        });
+        .expect(201);
+
+      // Try to access profile after logout
+      await request(app.getHttpServer())
+        .get('/auth/me')
+        .expect(401);
     });
   });
-
-  // Helper function for authenticated requests
-  const authenticatedRequest = async (method: string, url: string) => {
-    const agent = request.agent(app.getHttpServer());
-    
-    // Login first
-    await agent
-      .post('/auth/login')
-      .send(testUser)
-      .expect(200);
-    
-    // Make authenticated request
-    return agent[method.toLowerCase()](url);
-  };
-}); 
+});

@@ -5,12 +5,14 @@ import { DatabaseModule } from '../database/database.module';
 import { AuthModule } from '../auth/auth.module'; // Import AuthModule if JwtAuthGuard needs dependencies from it
 import { FileStorageService } from '../common/services/file-storage.service';
 import { CommonModule } from '../common/common.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
     DatabaseModule,
     AuthModule, // Ensure AuthModule is imported if JwtAuthGuard relies on it
-    CommonModule
+    CommonModule,
+    EmailModule
   ],
   controllers: [EstimateController],
   providers: [

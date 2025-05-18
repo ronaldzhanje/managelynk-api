@@ -62,7 +62,6 @@ export class VendorController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async createVendor(@Body() vendor: VendorDto) {
-    console.log('Received vendor data:', vendor);
     return this.vendorService.createVendor(vendor);
   }
 
@@ -232,7 +231,6 @@ export class VendorController {
     @Query('businessName') businessName?: string,
     @Query('city') city?: string,
   ): Promise<VendorDto[]> {
-    console.log('process.env.NODE_ENV', process.env.NODE_ENV);
     return this.vendorService.getAllVendors({ 
       licenseType, 
       licenseStatus, 

@@ -28,5 +28,5 @@ export default {
   seeds: {
     directory: './seeds'
   },
-  debug: process.env.NODE_ENV !== 'production'
+  debug: process.env.NODE_ENV === 'development'
 };

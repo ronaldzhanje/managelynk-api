@@ -27,9 +27,6 @@ export class AuthService {
       role: user.role
     };
     const token = this.jwtService.sign(payload);
-
-    console.log('NODE_ENV:', process.env.NODE_ENV);
-    console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
     
     if (res) {
       const isProduction = process.env.NODE_ENV === 'production';

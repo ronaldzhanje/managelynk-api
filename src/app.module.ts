@@ -8,6 +8,7 @@ import { VendorModule } from './vendor/vendor.module';
 import { WorkOrderModule } from './work_order/work_order.module';
 import { EstimateModule } from './estimate/estimate.module';
 import { UserModule } from './user/user.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { UserModule } from './user/user.module';
     VendorModule,
     WorkOrderModule,
     EstimateModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

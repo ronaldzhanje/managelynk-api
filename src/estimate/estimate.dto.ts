@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Min, IsEmail } from 'class-validator';
 
 export class EstimateDto {
   @ApiProperty({
@@ -9,6 +9,14 @@ export class EstimateDto {
   @IsInt()
   @IsNotEmpty()
   work_order_id: number;
+
+  @ApiProperty({
+    description: 'Email address of the client who created the work order',
+    example: 'client@example.com'
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  client_email: string;
 
   @ApiProperty({
     description: 'ID of the associated vendor',
@@ -29,6 +37,28 @@ export class EstimateDto {
 
   @ApiProperty({
     description: 'Optional file path or URL for the estimate document',
+    example: 'path/to/estimate.pdf'
+  })
+  @IsOptional()
+  file_path?: string;
+
+  @ApiProperty({
+    description: 'Optional status of the estimate',
+    example: 'pending'
+  })
+  @IsString()
+  @IsOptional()
+  status?: string;
+
+  @ApiProperty({
+    description: 'Optional notes about the estimate',
+    example: 'Additional details about the estimate'
+  })
+  @IsString()
+  @IsOptional()
+  notes?: string;
+
+  @ApiProperty({
     example: '/uploads/estimate_123.pdf',
     required: false,
   })
