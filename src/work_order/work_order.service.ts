@@ -1,5 +1,6 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { Knex } from 'knex';
+import { MessageType, MessageMetadataDto } from './dto/message.dto';
 import { CreateWorkOrderDto } from './dto/create_work_order.dto';
 import { UpdateWorkOrderDto } from './dto/update_work_order.dto';
 import { WorkOrder } from './work_order.entity';
@@ -250,5 +251,68 @@ export class WorkOrderService {
         return workOrder;
       })
     );
+  }
+
+  async createMessage(workOrderId: number, content: string, userId: number, type: MessageType = MessageType.TEXT, metadata?: MessageMetadataDto) {
+    const messageData = {
+      type,
+      content,
+      metadata
+    };
+
+    const [message] = await this.knex('messages')
+      .insert({
+        work_order_id: workOrderId,
+        user_id: userId,
+        message: JSON.stringify(messageData)
+      })
+      .returning('*');
+
+    const parsedMessage = JSON.parse(message.message);
+    return {
+      id: message.id,
+      work_order_id: message.work_order_id,
+      user_id: message.user_id,
+      type: parsedMessage.type,
+      content: parsedMessage.content,
+      metadata: parsedMessage.metadata,
+      created_at: message.created_at,
+      updated_at: message.updated_at
+    };
+  }
+
+  async getMessages(workOrderId: number, { page, limit }: { page: number; limit: number }) {
+    const offset = (page - 1) * limit;
+
+    const [messages, [{ total }]] = await Promise.all([
+      this.knex('messages')
+        .where({ work_order_id: workOrderId })
+        .orderBy('created_at', 'desc')
+        .offset(offset)
+        .limit(limit)
+        .select('*'),
+      this.knex('messages')
+        .where({ work_order_id: workOrderId })
+        .count('* as total')
+    ]);
+
+    return {
+      messages: messages.map(msg => {
+        const parsedMessage = JSON.parse(msg.message);
+        return {
+          id: msg.id,
+          work_order_id: msg.work_order_id,
+          user_id: msg.user_id,
+          type: parsedMessage.type,
+          content: parsedMessage.content,
+          metadata: parsedMessage.metadata,
+          created_at: msg.created_at,
+          updated_at: msg.updated_at
+        };
+      }),
+      total,
+      page,
+      limit
+    };
   }
 }

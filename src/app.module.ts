@@ -9,6 +9,7 @@ import { WorkOrderModule } from './work_order/work_order.module';
 import { EstimateModule } from './estimate/estimate.module';
 import { UserModule } from './user/user.module';
 import { EmailModule } from './email/email.module';
+import { RedisModule } from './common/redis/redis.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { EmailModule } from './email/email.module';
     WorkOrderModule,
     EstimateModule,
     EmailModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [AppService],
