@@ -7,14 +7,61 @@ import { WorkOrder } from './work_order.entity';
 import { WorkOrderStatus } from './dto/work_order_status.enum';
 import { FileStorageService } from '../common/services/file-storage.service';
 import { ConfigService } from '@nestjs/config';
+import { RedisService } from '../common/redis/redis.service';
 import { Role } from '../common/enums/role.enum';
+import { StartWorkOrderDto } from './dto/start_work_order.dto';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class WorkOrderService {
+  async startWorkOrder(startWorkOrderDto: StartWorkOrderDto, userId: number) {
+    const sessionId = uuidv4();
+
+    return await this.knex.transaction(async (trx) => {
+      // 1. Create work order
+      const [workOrder] = await trx('work_orders')
+        .insert({
+          description: startWorkOrderDto.initialMessage, // Use initialMessage as description
+          user_id: userId,
+          status: WorkOrderStatus.DRAFT,
+          location: null // Make location nullable
+        })
+        .returning('id');
+
+      // 2. Create initial message
+      const [message] = await trx('messages')
+        .insert({
+          work_order_id: workOrder.id,
+          user_id: userId,
+          message: JSON.stringify({
+            type: 'text',
+            content: startWorkOrderDto.initialMessage
+          })
+        })
+        .returning(['id', 'message', 'created_at']);
+
+      // 3. Start Redis chat session
+      await this.redisService.createSession(sessionId, {
+        work_order_id: workOrder.id,
+        user_id: userId
+      });
+
+      return {
+        sessionId,
+        workOrderId: workOrder.id,
+        message: {
+          id: message.id,
+          message: message.message,
+          created_at: message.created_at
+        }
+      };
+    });
+  }
   constructor(
     @Inject('KNEX_CONNECTION') private readonly knex: Knex,
     private readonly fileStorageService: FileStorageService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly redisService: RedisService
   ) {}
 
   async transaction<T>(operation: (trx: Knex.Transaction) => Promise<T>): Promise<T> {
@@ -41,7 +88,7 @@ export class WorkOrderService {
           description: createWorkOrderDto.description,
           location: createWorkOrderDto.location,
           user_id: userId,
-          status: WorkOrderStatus.TROUBLESHOOTING,
+          status: WorkOrderStatus.DRAFT,
           scheduled_date: createWorkOrderDto.scheduled_date ? createWorkOrderDto.scheduled_date : null,
           images: '[]', // Initialize as empty array
         };

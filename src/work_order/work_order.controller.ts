@@ -11,10 +11,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   Request,
-  Headers,
-  NotFoundException,
   ForbiddenException,
-  Header,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -31,6 +28,7 @@ import { RedisService } from '../common/redis/redis.service';
 import { MessageDto } from './dto/message.dto';
 import { v4 as uuid } from 'uuid';
 import { WorkOrderService } from './work_order.service';
+import { StartWorkOrderDto } from './dto/start_work_order.dto';
 import { CreateWorkOrderDto } from './dto/create_work_order.dto';
 import { UpdateWorkOrderDto } from './dto/update_work_order.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -165,38 +163,42 @@ export class WorkOrderController {
     return this.workOrderService.deleteWorkOrder(id, user.userId);
   }
 
-  @Post(':workOrderId/start')
-  @UseGuards(ChatSessionGuard)
-  @ApiOperation({ summary: 'Start a new chat session' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Returns session ID to be used in x-session-id header for subsequent requests',
+  @Post('start')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Start a work order with chat' })
+  @ApiResponse({
+    status: 201,
+    description: 'Work order created with initial chat message',
     schema: {
-      type: 'object',
-      properties: {
-        sessionId: {
-          type: 'string',
-          example: '550e8400-e29b-41d4-a716-446655440000'
+      example: {
+        sessionId: 'uuid-v4-string',
+        workOrderId: 1,
+        message: {
+          id: 1,
+          message: {
+            type: 'text',
+            content: 'Initial message'
+          },
+          created_at: '2025-06-11T18:34:15.000Z'
         }
       }
     }
   })
-  @ApiResponse({ status: 409, description: 'Work order already has active chat' })
-  async startChat(
-    @Param('workOrderId') workOrderId: number,
+  async startWorkOrder(
+    @Body() startWorkOrderDto: StartWorkOrderDto,
     @Request() req
   ) {
-    const sessionId = uuid();
-    await this.redisService.createSession(sessionId, {
-      work_order_id: workOrderId,
-      user_id: req.user.id
-    });
-    return { sessionId };
+    return this.workOrderService.startWorkOrder(startWorkOrderDto, req.user.userId);
   }
 
   @Post(':workOrderId/message')
   @UseGuards(ChatSessionGuard)
   @ApiOperation({ summary: 'Send a message' })
+  @ApiHeader({
+    name: 'x-session-id',
+    description: 'Active chat session ID',
+    required: true
+  })
   @ApiResponse({ status: 404, description: 'Chat session not found or expired' })
   async sendMessage(
     @Param('workOrderId') workOrderId: number,
@@ -215,6 +217,11 @@ export class WorkOrderController {
   @Get(':workOrderId/messages')
   @UseGuards(ChatSessionGuard)
   @ApiOperation({ summary: 'Get chat history' })
+  @ApiHeader({
+    name: 'x-session-id',
+    description: 'Active chat session ID',
+    required: true
+  })
   @ApiResponse({ status: 404, description: 'Chat session not found or expired' })
   async getMessages(
     @Param('workOrderId') workOrderId: number,

@@ -9,18 +9,39 @@ export class RedisService implements OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
 
   constructor(private readonly configService: ConfigService) {
+    const host = this.configService.get<string>('REDIS_HOST');
+    const port = this.configService.get<number>('REDIS_PORT');
+    const password = this.configService.get<string>('REDIS_PASSWORD');
+    
+    this.logger.log(`Attempting Redis connection to ${host}:${port}`);
+    
     this.client = new Redis({
-      host: this.configService.get<string>('REDIS_HOST'),
-      port: this.configService.get<number>('REDIS_PORT'),
-      password: this.configService.get<string>('REDIS_PASSWORD'),
+      host,
+      port,
+      password,
+      retryStrategy: (times) => {
+        if (times > 3) {
+          this.logger.error(`Redis retry attempts exhausted (${times} attempts)`);
+          return null;
+        }
+        return Math.min(times * 200, 1000);
+      },
+      maxRetriesPerRequest: 3,
+      enableAutoPipelining: false,
+      lazyConnect: false
     });
 
     this.client.on('error', (error) => {
       this.logger.error('Redis connection error:', error);
     });
 
-    this.client.on('connect', () => {
-      this.logger.log('Successfully connected to Redis');
+    this.client.on('connect', async () => {
+      try {
+        await this.client.ping();
+        this.logger.log('Successfully connected and authenticated to Redis');
+      } catch (error) {
+        this.logger.error('Redis authentication failed:', error);
+      }
     });
   }
 
@@ -28,6 +49,7 @@ export class RedisService implements OnModuleDestroy {
     await this.client.quit();
   }
 
+  // Chat Session Operations
   async createSession(sessionId: string, data: ChatSession): Promise<void> {
     try {
       await this.client.set(

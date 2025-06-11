@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { deleteTestUser } from '../helpers/db';
 
 test.describe('Authentication', () => {
   const testUser = {
@@ -7,6 +8,10 @@ test.describe('Authentication', () => {
     firstName: 'Test',
     lastName: 'User'
   };
+
+  test.afterEach(async () => {
+    await deleteTestUser(testUser.email);
+  });
 
   test('should login with created account', async ({ request }) => {
     const registerResponse = await request.post('/auth/register', {

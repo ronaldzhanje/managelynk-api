@@ -4,7 +4,8 @@ import { Type } from 'class-transformer';
 
 export enum MessageType {
   TEXT = 'text',
-  AI_RESPONSE = 'ai_response'
+  AI_RESPONSE = 'ai_response',
+  IMAGE = 'image'
 }
 
 export class MessageMetadataDto {
@@ -30,13 +31,13 @@ export class MessageDto {
   @ApiProperty({
     enum: MessageType,
     default: MessageType.TEXT,
-    description: 'Type of message'
+    description: 'Type of message (text, ai_response, or image)'
   })
   @IsEnum(MessageType)
   type: MessageType = MessageType.TEXT;
 
   @ApiProperty({
-    description: 'Message content',
+    description: 'Message content. For type=image, this should be the image URL/key',
     example: 'When will the technician arrive?'
   })
   @IsString()

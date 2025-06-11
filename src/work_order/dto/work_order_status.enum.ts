@@ -1,11 +1,11 @@
 export enum WorkOrderStatus {
-  TROUBLESHOOTING = 'Troubleshooting',
-  CONSULTING_VENDORS = 'Consulting Vendors',
-  READY_FOR_REVIEW = 'Ready for Review',
-  ESTIMATE_APPROVED = 'Estimate Approved',
-  SCHEDULED = 'Scheduled',
-  WORK_IN_PROGRESS = 'Work in Progress',
-  COMPLETED = 'Completed',
-  INCOMPLETE = 'Incomplete',
-  CANCELLED = 'Cancelled',
+  DRAFT = 'draft',
+  CONSULTING_VENDORS = 'consulting_vendors',
+  READY_FOR_REVIEW = 'ready_for_review',
+  QUOTE_APPROVED = 'quote_approved',
+  SCHEDULED = 'scheduled',
+  WORK_IN_PROGRESS = 'work_in_progress',
+  COMPLETED = 'completed',
+  INCOMPLETE = 'incomplete',
+  CANCELLED = 'cancelled'
 } 
