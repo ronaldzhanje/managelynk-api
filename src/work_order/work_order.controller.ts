@@ -192,7 +192,7 @@ export class WorkOrderController {
   }
 
   @Post(':workOrderId/message')
-  @UseGuards(ChatSessionGuard)
+  @UseGuards(JwtAuthGuard,ChatSessionGuard)
   @ApiOperation({ summary: 'Send a message' })
   @ApiHeader({
     name: 'x-session-id',
@@ -208,14 +208,13 @@ export class WorkOrderController {
     return this.workOrderService.createMessage(
       workOrderId,
       messageDto.content,
-      req.user.id,
-      messageDto.type,
-      messageDto.metadata
+      req.user.userId,
+      messageDto.type
     );
   }
 
   @Get(':workOrderId/messages')
-  @UseGuards(ChatSessionGuard)
+  @UseGuards(JwtAuthGuard,ChatSessionGuard)
   @ApiOperation({ summary: 'Get chat history' })
   @ApiHeader({
     name: 'x-session-id',

@@ -8,25 +8,6 @@ export enum MessageType {
   IMAGE = 'image'
 }
 
-export class MessageMetadataDto {
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  model?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  prompt_tokens?: number;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  completion_tokens?: number;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  total_tokens?: number;
-}
-
 export class MessageDto {
   @ApiProperty({
     enum: MessageType,
@@ -44,12 +25,6 @@ export class MessageDto {
   @IsNotEmpty()
   @MaxLength(1000)
   content: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => MessageMetadataDto)
-  metadata?: MessageMetadataDto;
 }
 
 export class MessageResponseDto {
@@ -67,9 +42,6 @@ export class MessageResponseDto {
 
   @ApiProperty()
   content: string;
-
-  @ApiProperty({ required: false })
-  metadata?: MessageMetadataDto;
 
   @ApiProperty()
   created_at: Date;

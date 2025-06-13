@@ -50,6 +50,134 @@ test.describe('Work Order API', () => {
     await deleteTestUser(testUser.email);
   });
 
+  test.describe('Work Order Messages', () => {
+    let sessionId: string;
+    let messageWorkOrderId: number;
+
+    test.beforeEach(async () => {
+      // Start work order to get sessionId
+      const startResponse = await authContext.post('/work-orders/start', {
+        data: {
+          initialMessage: 'Test work order for messages'
+        }
+      });
+      const data = await startResponse.json();
+      sessionId = data.sessionId;
+      messageWorkOrderId = data.workOrderId;
+    });
+
+    test('should send a text message successfully', async () => {
+      const response = await authContext.post(`/work-orders/${messageWorkOrderId}/message`, {
+        headers: {
+          'x-session-id': sessionId
+        },
+        data: {
+          type: 'text',
+          content: 'When will the technician arrive?'
+        }
+      });
+
+      expect(response.status()).toBe(201);
+      const data = await response.json();
+      expect(data).toHaveProperty('id');
+      expect(data.type).toBe('text');
+      expect(data.content).toBe('When will the technician arrive?');
+      expect(data).toHaveProperty('created_at');
+    });
+
+    test('should send an image message successfully', async () => {
+      const response = await authContext.post(`/work-orders/${messageWorkOrderId}/message`, {
+        headers: {
+          'x-session-id': sessionId
+        },
+        data: {
+          type: 'image',
+          content: 'https://example.com/image.jpg'
+        }
+      });
+
+      expect(response.status()).toBe(201);
+      const data = await response.json();
+      expect(data.type).toBe('image');
+      expect(data.content).toBe('https://example.com/image.jpg');
+    });
+
+    test('should reject empty message content', async () => {
+      const response = await authContext.post(`/work-orders/${messageWorkOrderId}/message`, {
+        headers: {
+          'x-session-id': sessionId
+        },
+        data: {
+          type: 'text',
+          content: ''
+        }
+      });
+
+      expect(response.status()).toBe(400);
+      expect(response.statusText()).toBe('Bad Request');
+      const error = await response.json();
+      expect(error.message).toContain('content should not be empty');
+    });
+
+    test('should reject invalid message type', async () => {
+      const response = await authContext.post(`/work-orders/${messageWorkOrderId}/message`, {
+        headers: {
+          'x-session-id': sessionId
+        },
+        data: {
+          type: 'invalid_type',
+          content: 'Test message'
+        }
+      });
+
+      expect(response.status()).toBe(400);
+      const error = await response.json();
+      expect(error.message).toContain('type must be one of the following values: text, ai_response, image');
+    });
+
+    test('should reject request without session ID', async () => {
+      const response = await authContext.post(`/work-orders/${messageWorkOrderId}/message`, {
+        data: {
+          type: 'text',
+          content: 'Test message'
+        }
+      });
+
+      expect(response.status()).toBe(401);
+    });
+
+    test('should reject request with invalid session ID', async () => {
+      const response = await authContext.post(`/work-orders/${messageWorkOrderId}/message`, {
+        headers: {
+          'x-session-id': 'invalid-session'
+        },
+        data: {
+          type: 'text',
+          content: 'Test message'
+        }
+      });
+
+      expect(response.status()).toBe(404);
+      expect(response.statusText()).toBe('Not Found');
+    });
+
+    test('should reject request without auth token', async ({ playwright }) => {
+      const noAuthContext = await playwright.request.newContext();
+      const response = await noAuthContext.post(`/work-orders/${messageWorkOrderId}/message`, {
+        headers: {
+          'x-session-id': sessionId
+        },
+        data: {
+          type: 'text',
+          content: 'Test message'
+        }
+      });
+
+      expect(response.status()).toBe(401);
+      await noAuthContext.dispose();
+    });
+  });
+
   test.describe('Start Work Order', () => {
     test('should start work order with chat', async () => {
       const response = await authContext.post('/work-orders/start', {

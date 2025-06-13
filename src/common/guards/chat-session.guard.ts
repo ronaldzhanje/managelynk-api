@@ -18,7 +18,7 @@ export class ChatSessionGuard implements CanActivate {
     const sessionId = request.headers['x-session-id'];
 
     // Starting new chat session
-    if (request.path.endsWith('/chat') && request.method === 'POST') {
+    if (request.url.endsWith('/start') && request.method === 'POST') {
       if (await this.redisService.isWorkOrderInSession(workOrderId)) {
         throw new ConflictException('Work order already has an active chat session');
       }
@@ -37,7 +37,7 @@ export class ChatSessionGuard implements CanActivate {
     }
 
     // Verify user owns the session
-    if (session.user_id !== request.user.id) {
+    if (session.user_id !== request.user.userId) {
       throw new UnauthorizedException('You do not have access to this chat session');
     }
 
@@ -47,7 +47,7 @@ export class ChatSessionGuard implements CanActivate {
     }
 
     // For message endpoints, refresh session TTL
-    if (request.path.endsWith('/messages')) {
+    if (request.url.endsWith('/messages')) {
       await this.redisService.refreshSession(sessionId);
     }
 

@@ -1,6 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { Knex } from 'knex';
-import { MessageType, MessageMetadataDto } from './dto/message.dto';
+import { MessageType } from './dto/message.dto';
 import { CreateWorkOrderDto } from './dto/create_work_order.dto';
 import { UpdateWorkOrderDto } from './dto/update_work_order.dto';
 import { WorkOrder } from './work_order.entity';
@@ -300,11 +300,10 @@ export class WorkOrderService {
     );
   }
 
-  async createMessage(workOrderId: number, content: string, userId: number, type: MessageType = MessageType.TEXT, metadata?: MessageMetadataDto) {
+  async createMessage(workOrderId: number, content: string, userId: number, type: MessageType = MessageType.TEXT) {
     const messageData = {
       type,
-      content,
-      metadata
+      content
     };
 
     const [message] = await this.knex('messages')
@@ -315,14 +314,12 @@ export class WorkOrderService {
       })
       .returning('*');
 
-    const parsedMessage = JSON.parse(message.message);
     return {
       id: message.id,
       work_order_id: message.work_order_id,
       user_id: message.user_id,
-      type: parsedMessage.type,
-      content: parsedMessage.content,
-      metadata: parsedMessage.metadata,
+      type: message.message.type,
+      content: message.message.content,
       created_at: message.created_at,
       updated_at: message.updated_at
     };
