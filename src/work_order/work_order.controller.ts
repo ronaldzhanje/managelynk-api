@@ -12,26 +12,25 @@ import {
   UploadedFiles,
   Request,
   ForbiddenException,
+  BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { MessageType, MessageDto } from './dto/message.dto';
 import {
   ApiBearerAuth,
-  ApiConsumes,
+  ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiTags,
   ApiBody,
-  ApiHeader,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ChatSessionGuard } from '../common/guards/chat-session.guard';
-import { RedisService } from '../common/redis/redis.service';
-import { MessageDto } from './dto/message.dto';
-import { v4 as uuid } from 'uuid';
+import { WorkOrderOwnerGuard } from './guards/work-order-owner.guard';
 import { WorkOrderService } from './work_order.service';
 import { StartWorkOrderDto } from './dto/start_work_order.dto';
 import { CreateWorkOrderDto } from './dto/create_work_order.dto';
 import { UpdateWorkOrderDto } from './dto/update_work_order.dto';
-import { FilesInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Work Orders')
 @Controller('work-orders')
@@ -40,7 +39,6 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 export class WorkOrderController {
   constructor(
     private readonly workOrderService: WorkOrderService,
-    private readonly redisService: RedisService
   ) {}
 
   @Post()
@@ -171,7 +169,6 @@ export class WorkOrderController {
     description: 'Work order created with initial chat message',
     schema: {
       example: {
-        sessionId: 'uuid-v4-string',
         workOrderId: 1,
         message: {
           id: 1,
@@ -192,40 +189,95 @@ export class WorkOrderController {
   }
 
   @Post(':workOrderId/message')
-  @UseGuards(JwtAuthGuard,ChatSessionGuard)
-  @ApiOperation({ summary: 'Send a message' })
-  @ApiHeader({
-    name: 'x-session-id',
-    description: 'Active chat session ID',
-    required: true
+  @UseGuards(JwtAuthGuard, WorkOrderOwnerGuard)
+  @ApiOperation({ summary: 'Send a message with optional images' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        type: { 
+          type: 'string',
+          enum: Object.values(MessageType),
+          default: MessageType.TEXT
+        },
+        content: {
+          type: 'string',
+          description: 'Message text or image caption'
+        },
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary'
+          },
+          description: 'Image files (max 10)'
+        }
+      }
+    }
   })
-  @ApiResponse({ status: 404, description: 'Chat session not found or expired' })
+  @UseInterceptors(
+    FilesInterceptor('files', 10, {
+      limits: { 
+        fileSize: 50 * 1024 * 1024,
+        files: 10
+      },
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/^image\/(jpg|jpeg|png|gif)$/)) {
+          cb(new BadRequestException('Only image files are allowed'), false);
+        }
+        cb(null, true);
+      },
+    })
+  )
   async sendMessage(
     @Param('workOrderId') workOrderId: number,
     @Body() messageDto: MessageDto,
+    @UploadedFiles() files: Express.Multer.File[],
     @Request() req
   ) {
-    return this.workOrderService.createMessage(
-      workOrderId,
-      messageDto.content,
-      req.user.userId,
-      messageDto.type
-    );
+    try {
+      // Handle image upload with transaction
+      if (files?.length > 0) {
+        // Force type to IMAGE for file uploads
+        messageDto.type = MessageType.IMAGE;
+        return await this.workOrderService.sendMessageWithImages(
+          workOrderId,
+          req.user.userId,
+          files,
+          messageDto.content
+        );
+      }
+
+      // Handle text message
+      if (!messageDto.content) {
+        throw new BadRequestException('Message content is required for text messages');
+      }
+
+      return this.workOrderService.sendMessage(
+        workOrderId,
+        messageDto.content,
+        req.user.userId,
+        messageDto.type || MessageType.TEXT
+      );
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      console.error('Error sending message:', error);
+      throw new InternalServerErrorException('Failed to send message');
+    }
   }
 
   @Get(':workOrderId/messages')
-  @UseGuards(JwtAuthGuard,ChatSessionGuard)
-  @ApiOperation({ summary: 'Get chat history' })
-  @ApiHeader({
-    name: 'x-session-id',
-    description: 'Active chat session ID',
-    required: true
-  })
-  @ApiResponse({ status: 404, description: 'Chat session not found or expired' })
+  @UseGuards(JwtAuthGuard, WorkOrderOwnerGuard)
+  @ApiOperation({ summary: 'Get work order messages' })
+  @ApiResponse({ status: 404, description: 'Work order not found' })
+  @ApiResponse({ status: 403, description: 'Access denied' })
   async getMessages(
     @Param('workOrderId') workOrderId: number,
-    @Query('page') page = 1,
-    @Query('limit') limit = 50
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10
   ) {
     return this.workOrderService.getMessages(workOrderId, { page, limit });
   }

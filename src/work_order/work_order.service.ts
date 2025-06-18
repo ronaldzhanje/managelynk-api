@@ -7,16 +7,53 @@ import { WorkOrder } from './work_order.entity';
 import { WorkOrderStatus } from './dto/work_order_status.enum';
 import { FileStorageService } from '../common/services/file-storage.service';
 import { ConfigService } from '@nestjs/config';
-import { RedisService } from '../common/redis/redis.service';
 import { Role } from '../common/enums/role.enum';
 import { StartWorkOrderDto } from './dto/start_work_order.dto';
-import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class WorkOrderService {
-  async startWorkOrder(startWorkOrderDto: StartWorkOrderDto, userId: number) {
-    const sessionId = uuidv4();
+  private readonly uploadSemaphore = {
+    maxConcurrent: 3,
+    running: 0
+  };
 
+  private async acquireSemaphore(): Promise<void> {
+    while (this.uploadSemaphore.running >= this.uploadSemaphore.maxConcurrent) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    this.uploadSemaphore.running++;
+  }
+
+  private releaseSemaphore(): void {
+    this.uploadSemaphore.running--;
+  }
+
+  private async uploadWithRetry(
+    file: Express.Multer.File,
+    filename: string,
+    maxAttempts = 3
+  ): Promise<string> {
+    let attempts = 0;
+    let lastError: any;
+
+    while (attempts < maxAttempts) {
+      try {
+        return await this.fileStorageService.uploadFile(
+          file.buffer,
+          filename,
+          file.mimetype
+        );
+      } catch (error) {
+        attempts++;
+        lastError = error;
+        if (attempts === maxAttempts) break;
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempts)));
+      }
+    }
+
+    throw lastError;
+  }
+  async startWorkOrder(startWorkOrderDto: StartWorkOrderDto, userId: number) {
     return await this.knex.transaction(async (trx) => {
       // 1. Create work order
       const [workOrder] = await trx('work_orders')
@@ -40,14 +77,7 @@ export class WorkOrderService {
         })
         .returning(['id', 'message', 'created_at']);
 
-      // 3. Start Redis chat session
-      await this.redisService.createSession(sessionId, {
-        work_order_id: workOrder.id,
-        user_id: userId
-      });
-
       return {
-        sessionId,
         workOrderId: workOrder.id,
         message: {
           id: message.id,
@@ -61,7 +91,6 @@ export class WorkOrderService {
     @Inject('KNEX_CONNECTION') private readonly knex: Knex,
     private readonly fileStorageService: FileStorageService,
     private readonly configService: ConfigService,
-    private readonly redisService: RedisService
   ) {}
 
   async transaction<T>(operation: (trx: Knex.Transaction) => Promise<T>): Promise<T> {
@@ -325,6 +354,108 @@ export class WorkOrderService {
     };
   }
 
+  private async cleanupUploadedFiles(urls: string[]): Promise<void> {
+    if (urls.length === 0) return;
+
+    await Promise.all(
+      urls.map(async (url) => {
+        try {
+          await this.fileStorageService.deleteFile(url);
+        } catch (error) {
+          console.error('Failed to cleanup file:', url, error);
+        }
+      })
+    );
+  }
+
+  async uploadImages(files: Express.Multer.File[], workOrderId: number): Promise<string[]> {
+    const uploadedUrls: string[] = [];
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
+    
+    try {
+      for (const file of files) {
+        await this.acquireSemaphore();
+        try {
+          const filename = `${nodeEnv}/work_orders/${workOrderId}/messages/${Date.now()}-${file.originalname}`;
+          const url = await this.uploadWithRetry(file, filename);
+          uploadedUrls.push(url);
+        } finally {
+          this.releaseSemaphore();
+        }
+      }
+
+      return uploadedUrls;
+    } catch (error) {
+      await this.cleanupUploadedFiles(uploadedUrls);
+      throw error;
+    }
+  }
+
+  async sendMessageWithImages(
+    workOrderId: number,
+    userId: number,
+    files: Express.Multer.File[],
+    caption?: string
+  ) {
+    return this.transaction(async (trx) => {
+      // Upload all images first
+      const imageUrls = await this.uploadImages(files, workOrderId);
+      
+      // Create the message with image URLs
+      const [message] = await trx('messages')
+        .insert({
+          work_order_id: workOrderId,
+          user_id: userId,
+          message: JSON.stringify({
+            type: MessageType.IMAGE,
+            content: {
+              images: imageUrls,
+              text: caption || ''
+            }
+          })
+        })
+        .returning('*');
+
+      return {
+        id: message.id,
+        work_order_id: message.work_order_id,
+        user_id: message.user_id,
+        type: MessageType.IMAGE,
+        content: {
+          images: imageUrls,
+          text: caption || ''
+        },
+        created_at: message.created_at,
+        updated_at: message.updated_at
+      };
+    });
+  }
+
+  async sendMessage(workOrderId: number, content: string, userId: number, type: MessageType = MessageType.TEXT) {
+    const messageData = {
+      type,
+      content
+    };
+
+    const [message] = await this.knex('messages')
+      .insert({
+        work_order_id: workOrderId,
+        user_id: userId,
+        message: JSON.stringify(messageData)
+      })
+      .returning('*');
+
+    return {
+      id: message.id,
+      work_order_id: message.work_order_id,
+      user_id: message.user_id,
+      type: message.message.type,
+      content: message.message.content,
+      created_at: message.created_at,
+      updated_at: message.updated_at
+    };
+  }
+
   async getMessages(workOrderId: number, { page, limit }: { page: number; limit: number }) {
     const offset = (page - 1) * limit;
 
@@ -342,14 +473,12 @@ export class WorkOrderService {
 
     return {
       messages: messages.map(msg => {
-        const parsedMessage = JSON.parse(msg.message);
         return {
           id: msg.id,
           work_order_id: msg.work_order_id,
           user_id: msg.user_id,
-          type: parsedMessage.type,
-          content: parsedMessage.content,
-          metadata: parsedMessage.metadata,
+          type: msg.message.type,
+          content: msg.message.content,
           created_at: msg.created_at,
           updated_at: msg.updated_at
         };

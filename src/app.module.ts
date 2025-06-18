@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from './auth/auth.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
+import { UserModule } from './user/user.module';
+import { AuthModule } from './auth/auth.module';
+import { CommonModule } from './common/common.module';
 import { VendorModule } from './vendor/vendor.module';
 import { WorkOrderModule } from './work_order/work_order.module';
 import { EstimateModule } from './estimate/estimate.module';
-import { UserModule } from './user/user.module';
 import { EmailModule } from './email/email.module';
-import { RedisModule } from './common/redis/redis.module';
 
 @Module({
   imports: [
@@ -20,11 +20,11 @@ import { RedisModule } from './common/redis/redis.module';
     AuthModule,
     DatabaseModule,
     UserModule,
+    CommonModule,
     VendorModule,
     WorkOrderModule,
     EstimateModule,
     EmailModule,
-    RedisModule,
   ],
   controllers: [AppController],
   providers: [AppService],
